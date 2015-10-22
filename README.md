@@ -1,4 +1,4 @@
-# cron_dothis
+# crontask
 * Bash/sh script to use in crontab config
 * call scripts or URLs, with optional logging and healthchecks.io integration
 
