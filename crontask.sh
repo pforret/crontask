@@ -3,6 +3,12 @@
 progname=$(basename "$0")
 verbose=0
 logfile=""
+timeout=10	# default URL timeout
+hchck=""
+mail=""
+logfolder=""
+logfile=""
+
 
 ### DEFINE LOGGING AND USAGE FUNCTIONS
 prefix_time(){
@@ -11,8 +17,8 @@ prefix_time(){
 		timestamp=$(date '+%Y-%m-%d %H:%M:%S')
 		echo "$timestamp | $line"
 	done \
-	| if [ -f $logfile ] ; then
-		tee $logfile
+	| if [ -f "$logfile" ] ; then
+		tee "$logfile"
 	else
 		cat
 	fi
@@ -58,3 +64,23 @@ END
 # exit if there are no arguments
 [ $# -eq 0 ] && usage
 
+while [ $# -gt 0 ] ; do
+	case "$1" in
+		-v)	
+			verbose=1
+			trace "-v: entering verbose mode";;	
+			shift
+			break;;
+			
+		-h) 
+			usage;;
+			break;;
+			
+		--hchk)
+			
+			
+		--) shift;break;;
+		*) break;;
+	esac
+	shift
+done

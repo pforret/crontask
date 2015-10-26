@@ -3,9 +3,12 @@
 * call scripts or URLs, with optional logging and healthchecks.io integration
 
 ## Usage
-
-	cdt.sh [-v] [--hchk <uid>] [--tid <tid>] [--log <folder>] [--mail <user@example.com>] [script|url]
-
+#--- crontask.sh - crontask (v1.0 - Oct 2015)
+#--- https://github.com/pforret/crontask by Peter Forret
+#--- GNU GENERAL PUBLIC LICENSE (see LICENSE file)
+#--- cron wrapper script, with logging, timeout and heartbeat
+     Usage:
+       crontask.sh [-v] [-h] [--hchk <id>] [--mail <email@example.com] script|url
 	-v		:	verbose
 	--hchk	:	call a healthchecks.io URL after task finished successfully
 	--log	:	add log to file (and keep file)
@@ -14,10 +17,11 @@
 	script	:	local script (with full path)
 	url  	:	httpp or https URL (requires curl, wget, python or php on your server)
 
-## Examples
+     Examples:
+       0  4   * * * crontask.sh /path/daily_cleanup.sh
+       15 *   * * * crontask.sh http://example.com/process_queue.php
+       15 *   * * * crontask.sh --hchk XXX --log /var/log/cron/ http://example.com/process_queue.php
 
-	0 1  * * *	/path/cdt.sh /run/this/task
-	0 1  * * *  /path/cdt.sh "http://www.example.com/"
-	0 1  * * *	/path/cdt.sh --hchk [healthchecks.io uid] /run/this/task
-	0 1  * * *	/path/cdt.sh --log  [log_dir] "http://www.example.com/"
-	0 1  * * *	/path/cdt.sh --mail [me@example.com] "http://www.example.com/"
+     crontab tips
+     * add MAILTO=your@email.com to the beginning of the crontab config
+     * create a symbolic link to crontash.sh: "ln -s /the/path/to/crontask.sh /usr/bin/ct"
