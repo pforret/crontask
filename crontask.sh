@@ -39,48 +39,166 @@ log_error(){
 	exit 1
 }
 
+graburl(){
+	grabbed=0
+	if [ $grabbed -eq 0 ] ; then
+		if [ -n "$(which curl)" ] ;  then
+			grabmethod="curl"
+			grabbed=1
+			curl -s "$1"
+		fi
+	fi
+	if [ $grabbed -eq 0 ] ; then
+		if [ -n "$(which wget)" ] ;  then
+			grabbed=1
+			grabmethod="wget"
+			wget -s "$1" -o -
+		fi
+	fi
+}
+
 usage(){
 cat <<END
-#--- $progname - crontask (v1.0 - Oct 2015)
-#--- https://github.com/pforret/crontask by Peter Forret
-#--- GNU GENERAL PUBLIC LICENSE (see LICENSE file)
-#--- cron wrapper script, with logging, timeout and heartbeat
-     Usage:
+	$progname - crontask (v1.0 - Oct 2015)
+	https://github.com/pforret/crontask by Peter Forret
+	GNU GENERAL PUBLIC LICENSE (see LICENSE file)
+	cron wrapper script, with logging, timeout and heartbeat
+	Usage:
        $progname [-v] [-h] [--hchk <id>] [--mail <email@example.com] script|url
 
-     Examples:
+	Examples:
        0  4   * * * $progname /path/daily_cleanup.sh
        15 *   * * * $progname http://example.com/process_queue.php
        15 *   * * * $progname --hchk XXX --log /var/log/cron/ http://example.com/process_queue.php
        
-     crontab tips
-     * add MAILTO=your@email.com to the beginning of the crontab config
-     * create a symbolic link to crontash.sh: "ln -s /the/path/to/crontask.sh /usr/bin/ct"
-       then use /usr/bin/ct in your crontab (it's shorter)
+	crontab tips
+		* add MAILTO=your@email.com to the beginning of the crontab config
+		* create a symbolic link to crontash.sh: "ln -s /the/path/to/crontask.sh /usr/bin/ct"
+		  then use /usr/bin/ct in your crontab (it's shorter)
 END
 	exit
 }
 
 # exit if there are no arguments
 [ $# -eq 0 ] && usage
-
-while [ $# -gt 0 ] ; do
+#set -ex
+optionsdone=0
+while [ $optionsdone -eq 0 ] ; do
 	case "$1" in
-		-v)	
+		"-v")	
 			verbose=1
-			trace "-v: entering verbose mode";;	
-			shift
+			log_info "-v: entering verbose mode"
+			shift;;
+			
+		"-h") 
+			usage
 			break;;
 			
-		-h) 
-			usage;;
+		"--hchk")
+			hchck="$2"
+			log_info "HCHK: http://hchk.io/$hchk"
+			shift 2;;
+			
+		"--mail")
+			mail="$2"
+			log_info "MAIL: to [$mail]"
+			shift 2;;
+
+		"--log")
+			logfolder="$2"
+			log_info "LOG: in folder [$logfolder]"
+			shift 2;;
+			
+		*)	optionsdone=1
 			break;;
-			
-		--hchk)
-			
-			
-		--) shift;break;;
-		*) break;;
 	esac
-	shift
+	if [ $# -eq 0 ] ; then
+		optionsdone=1
+	fi
 done
+# what is left is the commandline to execute
+
+tasktype="shell"
+if [ $(expr $1 : "http://.*") -gt 0 ] ; then
+	tasktype="url"
+fi
+if [ $(expr $1 : "https://.*") -gt -0 ] ; then
+	tasktype="url"
+fi
+if [ "$tasktype" = "url" ] ; then
+	# argument is an url
+	bname=$(echo "$1" | cut -d/ -f3)	# domain name
+	uniq=$(echo "$1" | md5sum | cut -c1-6)
+else 
+	# argument is a script/executable
+	bname=$(basename $1 .sh)
+	uniq=$(echo $* | md5sum | cut -c1-6)
+fi
+day=$(date '+%Y-%m-%d')
+
+
+## decide on log file
+if [ -n "$logfolder" ] ; then
+	if [ ! -d "$logfolder" ] ; then
+		mkdir "$logfolder"
+		sleep 1 # wait until folder is created
+	fi
+	if [ ! -d "$logfolder" ] ; then
+		log_warning "Cannot create log folder [$logfolder]"
+	else 
+		logname=crontask.$bname.$uniq.$day.log
+		logfile=$logfolder/$logname
+		log_info "LOG: file [$logfile]"	
+	fi
+fi
+
+## decide on tmp file
+tmpfolder="/tmp/crontask"
+if [ ! -d "$tmpfolder" ] ; then
+	mkdir $tmpfolder
+	sleep 1
+fi
+if [ ! -d "$tmpfolder" ] ; then
+	log_warning "Cannot create temp folder [$tmpfolder]"
+else 
+	tmpname=$bname.$uniq.$$.tmp.txt
+	tmpfile=$tmpfolder/$tmpname
+	log_info "TMP: output file [$tmpfile]"	
+fi
+## now run the task
+if [ "$tasktype" = "url" ] ; then
+	# argument is an url
+	if [ -n "$logfile" ] ; then
+		log_warning "START URL [$1]" >> "$logfile"
+	fi
+	log_info "START URL [$1]"
+	graburl "$1" > $tmpfile
+	status=$?
+else 
+	# argument is a script/executable
+	if [ -n "$logfile" ] ; then
+		log_warning "START COMMAND [$*]" >> "$logfile"
+	fi
+	log_info "START COMMAND [$*]"
+	$* > $tmpfile
+	status=$?
+fi
+
+if [ $status -eq 0 ] ; then
+	# success
+	if [ -n "$logfile" ] ; then
+		log_info "TASK WAS OK [$*]" >> "$logfile"
+	fi
+	log_info "TASK WAS OK [$*]"
+	if [ -n "$hchk" ] ; then
+		graburl "http://hchk.io/$hchk"
+	fi
+else
+	#failure
+	if [ -n "$logfile" ] ; then
+		log_warning "TASK FAILED [$*]" >> "$logfile"
+	fi
+	log_warning "TASK FAILED [$*]"
+fi
+
+
