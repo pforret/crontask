@@ -9,7 +9,6 @@ mail=""
 logfolder=""
 logfile=""
 
-
 ### DEFINE LOGGING AND USAGE FUNCTIONS
 prefix_time(){
 	cat \
@@ -18,7 +17,7 @@ prefix_time(){
 		echo "$timestamp | $line"
 	done \
 	| if [ -f "$logfile" ] ; then
-		tee "$logfile"
+		tee -a "$logfile"
 	else
 		cat
 	fi
@@ -95,7 +94,7 @@ while [ $optionsdone -eq 0 ] ; do
 			break;;
 			
 		"--hchk")
-			hchck="$2"
+			hchk="$2"
 			log_info "HCHK: http://hchk.io/$hchk"
 			shift 2;;
 			
@@ -148,6 +147,9 @@ if [ -n "$logfolder" ] ; then
 	else 
 		logname=crontask.$bname.$uniq.$day.log
 		logfile=$logfolder/$logname
+		if [ ! -f $logfile ] ; then
+			echo "### LOG FILE STARTED AT $(date) by $0 ($$)" > $logfile
+		fi
 		log_info "LOG: file [$logfile]"	
 	fi
 fi
@@ -165,40 +167,43 @@ else
 	tmpfile=$tmpfolder/$tmpname
 	log_info "TMP: output file [$tmpfile]"	
 fi
+
+#############################################################################
 ## now run the task
 if [ "$tasktype" = "url" ] ; then
 	# argument is an url
-	if [ -n "$logfile" ] ; then
-		log_warning "START URL [$1]" >> "$logfile"
-	fi
 	log_info "START URL [$1]"
+	### DO IT !!!
 	graburl "$1" > $tmpfile
+	###
 	status=$?
 else 
 	# argument is a script/executable
-	if [ -n "$logfile" ] ; then
-		log_warning "START COMMAND [$*]" >> "$logfile"
-	fi
 	log_info "START COMMAND [$*]"
-	$* > $tmpfile
+	### DO IT !!!
+	($* 2>&1) > $tmpfile
+	###
 	status=$?
 fi
+#############################################################################
 
+### now process result
 if [ $status -eq 0 ] ; then
 	# success
-	if [ -n "$logfile" ] ; then
-		log_info "TASK WAS OK [$*]" >> "$logfile"
-	fi
 	log_info "TASK WAS OK [$*]"
 	if [ -n "$hchk" ] ; then
-		graburl "http://hchk.io/$hchk"
+		log_info "NOW CALLING [http://hchk.io/$hchk]"
+		HRESP=$(graburl "http://hchk.io/$hchk")
+		if [ "$HRESP" = "OK" ] ; then
+			log_info "CALL OK [healthchecks.io]"
+		else
+			log_warning "COULD NOT REACH [healthchecks.io]"
+		fi
 	fi
 else
 	#failure
-	if [ -n "$logfile" ] ; then
-		log_warning "TASK FAILED [$*]" >> "$logfile"
-	fi
 	log_warning "TASK FAILED [$*]"
 fi
-
+log_info "DELETE [$tmpfile]"
+rm $tmpfile
 

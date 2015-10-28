@@ -13,7 +13,6 @@
 	-v		:	verbose
 	--hchk	:	call a healthchecks.io URL after task finished successfully
 	--log	:	add log to file (and keep file)
-	--tid	: 	set task identifier (otherwise generated automatically - used for logging)
 	--mail	:	send mail after task finished successfully (requires python or php on your server)
 	script	:	local script (with full path)
 	url  	:	httpp or https URL (requires curl, wget, python or php on your server)
@@ -24,5 +23,9 @@
        15 *   * * * crontask.sh --hchk XXX --log /var/log/cron/ http://example.com/process_queue.php
 
      crontab tips
-     * add MAILTO=your@email.com to the beginning of the crontab config
+     * add the following lines to the beginning of your crontab config:
+     	SHELL=/bin/sh
+     	PATH=/sbin:/bin:/usr/sbin:/usr/bin:/opt/sbin:/opt/bin
+     	MAILTO=your@email.com
+
      * create a symbolic link to crontash.sh: "ln -s /the/path/to/crontask.sh /usr/bin/ct"
