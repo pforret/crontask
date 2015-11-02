@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/usr/bin/env sh
 ### INITIALIZE VARIABLES
 progname=$(basename "$0")
 verbose=0
@@ -124,14 +124,17 @@ fi
 if [ $(expr $1 : "https://.*") -gt -0 ] ; then
 	tasktype="url"
 fi
+if [ -n "$(which md5sum)" ] ; then
+	uniq=$(echo "$*" | md5sum | cut -c1-6)
+else
+	uniq=$(echo "$*" | sed 's/[\n\t\/]//g' | cut -c1-8)
+fi
 if [ "$tasktype" = "url" ] ; then
 	# argument is an url
 	bname=$(echo "$1" | cut -d/ -f3)	# domain name
-	uniq=$(echo "$1" | md5sum | cut -c1-6)
 else 
 	# argument is a script/executable
 	bname=$(basename $1 .sh)
-	uniq=$(echo $* | md5sum | cut -c1-6)
 fi
 day=$(date '+%Y-%m-%d')
 

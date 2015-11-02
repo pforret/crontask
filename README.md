@@ -18,14 +18,15 @@
 	url  	:	httpp or https URL (requires curl, wget, python or php on your server)
 
 	Examples:
-       0  4   * * * crontask.sh /path/daily_cleanup.sh
-       15 *   * * * crontask.sh http://example.com/process_queue.php
-       15 *   * * * crontask.sh --hchk XXX --log /var/log/cron/ http://example.com/process_queue.php
+		0  4   * * * /usr/bin/ct /path/daily_cleanup.sh
+		15 *   * * * /usr/bin/ct http://example.com/process_queue.php
+		15 *   * * * /usr/bin/ct --hchk XXX --log /var/log/cron/ http://example.com/process_queue.php
 
-     crontab tips
-     * add the following lines to the beginning of your crontab config:
+	crontab tips
+	* add the following lines to the beginning of your crontab config:
      	SHELL=/bin/sh
      	PATH=/sbin:/bin:/usr/sbin:/usr/bin:/opt/sbin:/opt/bin
      	MAILTO=your@email.com
 
-     * create a symbolic link to crontash.sh: "ln -s /the/path/to/crontask.sh /usr/bin/ct"
+	* create a symbolic link from /usr/bin/ct to crontash.sh
+     	sudo ln -s /the/path/to/crontask.sh /usr/bin/ct
