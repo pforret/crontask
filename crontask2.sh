@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-#// created with https://toolstud.io/data/bash.php
 
 # uncomment next line to have time prefix for every output line
 #prefix_fmt='+%H:%M:%S | '
@@ -14,12 +13,19 @@ runasroot=-1
 set -euo pipefail
 IFS=$'\n\t'
 
+hash(){
+  if [[ -n $(which md5sum) ]] ; then
+    md5sum | cut -c1-6
+  else
+    md5 | cut -c1-6
+  fi 
+}
 # change program version to your own release logic
 readonly PROGNAME=$(basename $0 .sh)
 readonly PROGFNAME=$(basename $0)
 readonly PROGDIR=$(cd $(dirname $0); pwd)
-readonly PROGUUID="L:$(cat $0 | wc -l | sed 's/\s//g')|MD:$(cat $0 | md5sum | cut -c1-8)"
-readonly PROGVERS="v1.3"
+readonly PROGUUID="L:$(cat $0 | wc -l | sed 's/\s//g')-MD:$(cat $0 | hash)"
+readonly PROGVERS="v2.0"
 readonly PROGAUTH="peter@forret.com"
 readonly USERNAME=$(whoami)
 readonly TODAY=$(date "+%Y-%m-%d")
@@ -35,10 +41,10 @@ flag|f|force|do not ask for confirmation
 option|l|logdir|use this as folder for log files|$PROGDIR/log
 option|t|tmpdir|use this as folder for temp files|$TEMP/$PROGNAME
 option|c|cache|cache results for [cache] minutes|5
-option|i|hchk|call hchk.io URL after succesful end|
-option|m|mail|send mail in case of error
-param|1|icount|what to output as 1st parameter: lines/words/chars/secs/msecs
-param|1|ocount|what to output as 2nd parameter: lines/words/chars/secs/msecs
+option|i|hchk|upon success, call healthchecks.io    (e.g. 0df09a4d-aaaa-aaaa-aaaa-852950e13614)|
+option|z|zpwh|upon failure, call zapier.com webhook (e.g. 199999/aa8iss )|
+param|1|icount|what to output as 1st parameter: lines/words/chars/secs/msecs/head/tail
+param|1|ocount|what to output as 2nd parameter: lines/words/chars/secs/msecs/head/tail
 param|1|type|what to do: cmd/url
 param|1|command|command to execute/URL to call
 " | grep -v '^#'
@@ -46,6 +52,10 @@ param|1|command|command to execute/URL to call
 
 #####################################################################
 ################### DO NOT MODIFY BELOW THIS LINE ###################
+
+#to enable verbose even for option parsing
+[[ $# -gt 0 ]] && [[ $1 == "-v" ]] && verbose=1
+
 
 PROGDATE=$(stat -c %y "$0" 2>/dev/null | cut -c1-16) # generic linux
 if [[ -z $PROGDATE ]] ; then
@@ -75,6 +85,7 @@ readonly wprogress=$(expr $nbcols - 5)
 readonly nbrows=$(tput lines)
 
 tmpfile=""
+tmpfiles=""
 logfile=""
 
 out() {
@@ -109,6 +120,7 @@ progress() {
     # next line will overwrite this line
   fi
 }
+
 trap "die \"$PROGIDEN stopped because [\$BASH_COMMAND] fails !\" ; " INT TERM EXIT
 safe_exit() { 
   [[ -n "$tmpfile" ]] && [[ -f "$tmpfile" ]] && rm "$tmpfile"
@@ -204,25 +216,40 @@ init_options() {
     local init_command=$(list_options \
     | awk '
     BEGIN { FS="|"; OFS=" ";}
-    $1 ~ /flag/   && $5 == "" {print $3"=0; "}
+    $1 ~ /flag/  && $5 == "" {print $3"=0; "}
     $1 ~ /flag/   && $5 != "" {print $3"="$5"; "}
-    $1 ~ /option/ && $5 == "" {print $3"=\" \"; "}
+    $1 ~ /option/ && $5 == "" {print $3"=\"\"; "}
     $1 ~ /option/ && $5 != "" {print $3"="$5"; "}
     ')
     if [[ -n "$init_command" ]] ; then
-        #log "init_options: $(echo "$init_command" | wc -l) options/flags initialised"
+        log "Options: "$(echo $init_command)
         eval "$init_command"
    fi
 }
 
 verify_programs(){
-	log "Running on $os_uname ($os_version)"
-  log "Checking programs: $(echo $*)]"
-	for prog in $* ; do
-		if [[ -z $(which "$prog") ]] ; then
-			alert "$PROGIDEN needs [$prog] but this program cannot be found on this $os_uname machine"
-		fi
-	done
+	log "Running: on $os_uname ($os_version)"
+  listhash=$(echo $* | hash)
+  okfile="$PROGDIR/.$PROGNAME.$listhash.verified"
+  if [[ -f "$okfile" ]] ; then
+    log "Checking: $(echo $*) -- cached]"
+  else 
+    log "Checking: $(echo $*)]"
+    okall=1
+    for prog in $* ; do
+      if [[ -z $(which "$prog") ]] ; then
+        alert "$PROGIDEN needs [$prog] but this program cannot be found on this $os_uname machine"
+        okall=0
+      fi
+    done
+    if [[ $okall -eq 1 ]] ; then
+      (
+        echo $PROGNAME: check required programs
+        echo $* 
+        date 
+      ) > "$okfile"
+    fi
+  fi
 }
 
 folder_prep(){
@@ -236,7 +263,7 @@ folder_prep(){
             log "Create folder [$folder]"
             mkdir "$folder"
         else
-            log "Cleanup folder [$folder] - delete older than $maxdays day(s)"
+            log "Cleanup: folder [$folder] - delete older than $maxdays day(s)"
             find "$folder" -mtime +$maxdays -type f -exec rm {} \;
         fi
 	fi
@@ -256,7 +283,7 @@ parse_options() {
     fi
 
     ## first process all the -x --xxxx flags and options
-    #set -x
+    log "Process: flags/options"
     while true; do
       # flag <flag> is savec as $flag = 0/1
       # option <option> is saved as $option
@@ -277,7 +304,7 @@ parse_options() {
         $1 ~ /option/ && "--"$3 == opt {print $3"=$2; shift"}
         ')
         if [[ -n "$save_option" ]] ; then
-            #log "parse_options: $save_option"
+            log "parse_options: $save_option"
             eval "$save_option"
         else
             die "$PROGIDEN cannot interpret option [$1]"
@@ -287,10 +314,10 @@ parse_options() {
 
     ## then run through the given parameters
   if expects_single_params ; then
-    log "Now processing single params"
+    log "Process: single params"
     single_params=$(list_options | grep 'param|1|' | cut -d'|' -f3)
     nb_singles=$(echo $single_params | wc -w)
-    log "Found $nb_singles parameters: $single_params"
+    log "Looking for $nb_singles single parameters: [$(echo $single_params)]"
     [[ $# -eq 0 ]]  && die "$PROGIDEN needs the parameter(s) [$(echo $single_params)]"
     
     for param in $single_params ; do
@@ -318,7 +345,7 @@ parse_options() {
       eval "$multi_param=( $* )"
     fi
   else 
-    log "No multi param to process"
+    #log "No multi param to process"
     nb_multis=0
     multi_param=""
     [[ $# -gt 0 ]] && die "$PROGIDEN cannot interpret extra parameters"
@@ -354,13 +381,45 @@ calculate(){
   local f_timing="$4"
 
   case $param in
-    "lines" ) wc -l  "$f_stdout" | awk '{print $1}' ;;
-    "words" ) wc -w  "$f_stdout" | awk '{print $1}' ;;
-    "chars" ) wc -c  "$f_stdout" | awk '{print $1}' ;;
-    "secs"  ) grep user "$f_timing" | awk '{print $2}' ;;
-    "msecs"  ) grep user "$f_timing" | awk '{print $2*1000}' ;;
-    *)  die "Unknown output [$param]"
+    "null" )
+      number=0
+      ;;
+
+    "lines" )
+      number=$(wc -l  "$f_stdout" | awk '{print $1}')
+      ;;
+    "words" )
+      number=$(wc -w  "$f_stdout" | awk '{print $1}')
+      ;;
+    "chars" )
+      number=$(wc -c  "$f_stdout" | awk '{print $1}')
+      ;;
+
+    "secs"  )
+      number=$(grep real "$f_timing" | awk '{print $2}')
+      ;;
+    "msecs" )
+      number=$(grep real "$f_timing" | awk '{print $2*1000}')
+      ;;
+
+    "tail" )
+      number=$(tail -1 "$f_stdout" | awk '{print 1*$1}')
+      ;;
+    "head" )
+      number=$(head -1 "$f_stdout" | awk '{print 1*$1}')
+      ;;
+    "tail2" )
+      number=$(tail -1 "$f_stderr" | awk '{print 1*$1}')
+      ;;
+    "head2" )
+      number=$(head -1 "$f_stderr" | awk '{print 1*$1}')
+      ;;
+
+    *)  
+      die "Unknown output [$param]"
   esac
+  # log "calculate: [$param]: $number"
+  echo $number
 }
 
 
@@ -369,34 +428,32 @@ main() {
   log "Program: $PROGFNAME $PROGVERS ($PROGUUID)"
   log "Updated: $PROGDATE"
   folder_prep "$tmpdir" 1
-  cmduniq=$(echo $icount $ocount $type $command | md5sum | cut -c1-8)
+  cmduniq=$(echo $icount $ocount $type $command | hash)
   cachefile=$tmpdir/$PROGNAME.$cmduniq.cache.txt
-  log "Cache file: $cachefile":
+  log "Caching: $cachefile":
   folder_prep "$logdir" 7
   logfile=$logdir/$PROGNAME.$TODAY.log
-  log "Log file: $logfile"
+  log "Logging: $logfile"
   echo "$(date '+%H:%M:%S') | [$PROGFNAME] $PROGVERS ($PROGUUID) started" >> $logfile
 
-  verify_programs awk curl cut date echo find grep head md5sum printf sed stat tail uname time
+  verify_programs awk bash curl cut date echo find grep head printf sed stat tail uname time
 
   timenow=$(date +%s)
-  tmpfiles=""
   if [[ -f "$cachefile" ]] ; then
     #timecache=$(date -r "$cachefile" +%s)
     #secscache=$(expr $timenow - $timecache)
     #minscache=$(expr $secscache / 60)
     minscache=$(date -r "$cachefile" +%s | awk "{secs = $timenow - \$1 ; printf \"%.0f\", secs / 60 }" )
     if [[ $minscache -le $cache ]] ; then
-      log "Cache file is $minscache minute(s) old - use cached content"
-      cat $cachefile
+      log "Caching: cachecd  is $minscache minute(s) old - use cached content"
+      ((!$quiet)) && cat $cachefile
       safe_exit
     fi
   fi
-  f_stdout=$tmpdir/$PROGNAME.$$.out.txt
-  f_stderr=$tmpdir/$PROGNAME.$$.err.txt
-  f_timing=$tmpdir/$PROGNAME.$$.tim.txt
+  f_stdout=$tmpdir/$PROGNAME.$cmduniq.out.txt
+  f_stderr=$tmpdir/$PROGNAME.$cmduniq.err.txt
+  f_timing=$tmpdir/$PROGNAME.$cmduniq.tim.txt
   tmpfiles="$f_stdout $f_stderr $f_timing"
-  log "TMP files = $tmpdir/$PROGNAME.$$.*.txt"
 
   type=$(lcase $type)
 
@@ -404,30 +461,65 @@ main() {
   progcurl=$(which curl)
 
   case $type in
-    url )
-      log "Command type = [$type]"
-      $progtime -o "$f_timing" -p $progcurl -s $command 1> "$f_stdout" 2> "$f_stderr"
+    url ) 
+      runcmd1=$progcurl
+      runcmd2=-s
       ;;
-
-    exec | cmd )
-      #log "Command type = [$type]: $command"
-      $progtime -o "$f_timing" -p bash -c $command 1> "$f_stdout" 2> "$f_stderr"
+    exec | cmd ) 
+      runcmd1=bash
+      runcmd2=-c
       ;;
     * )
       die "Unknown type [$type]"
   esac
 
-  out1=$(calculate $icount "$f_stdout" "$f_stderr" "$f_timing" )
-  out2=$(calculate $ocount "$f_stdout" "$f_stderr" "$f_timing" )
-  server=$(hostname)
-  uptime=$(uptime)
+  if $progtime -o "$f_timing" -p $runcmd1 $runcmd2 $command 1> "$f_stdout" 2> "$f_stderr" ; then
+    # program executed ok
+    if [[ -n "$hchk" ]] ; then
+      # ping hchk.io
+      webhook="https://hc-ping.com/$hchk"
+      log "program success: calling $webhook"
+      if curl -s $webhook > /dev/null ; then
+        log "Call to [$webhook]: OK"
+      else
+        alert "Call to [$webhook]: FAILED"
+      fi
+    fi
+    # now generate output for MRTG
+    if [[ $quiet -eq 0 ]] ; then
+      (
+      calculate $icount "$f_stdout" "$f_stderr" "$f_timing"
+      calculate $ocount "$f_stdout" "$f_stderr" "$f_timing"
+      echo "«$command»: $icount $ocount"
+      date "+%F %T"
+      ) | tee $cachefile
+    fi
+  else 
+    # program failed
+    cmderror=$(head -1 $f_timing)
+    if [[ -n $zpwh ]] ; then
+      # call zapier hook
+      webhook="https://hooks.zapier.com/hooks/catch/$zpwh"
+      log "program failed: calling [$webhook]"
+      if curl -s --data "program=$PROGIDEN&user=$USERNAME@$HOSTNAME&command=$type:$command&error=$cmderror" $webhook > /dev/null ; then
+        log "Call to [$webhook]: OK"
+      else
+        alert "Call to [$webhook]: FAILED"
+      fi
+    fi
+    # now generate output for MRTG
+    if [[ $quiet -eq 0 ]] ; then
+      calculate $icount "$f_stdout" "$f_stderr" "$f_timing"
+      calculate $ocount "$f_stdout" "$f_stderr" "$f_timing"
+      echo "«$command»: $icount $ocount [error]"
+      echo "ERROR: $cmderror"
+    fi
+  fi
 
-  (
-  echo $out1
-  echo $out2
-  echo $server
-  echo $uptime
-  ) | tee $cachefile
+  log "Cleanup: deleting temp files"
+  rm -f "$f_stdout"
+  rm -f "$f_stderr"
+  rm -f "$f_timing"
 
 }
 
@@ -440,4 +532,3 @@ log "-------------- STARTING (main) $PROGNAME" # this will show up even if your 
 main
 log "---------------- FINISH (main) $PROGNAME" # a start needs a finish
 safe_exit
-
