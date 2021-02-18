@@ -35,8 +35,6 @@ param|?|input|command to execute/URL to call
 main() {
   log_to_file "[$script_basename] $script_version started"
 
-  time_start="$(date +%s)"
-
   prog_time=$(which time) # to avoid using shell built-in time command with less options
   debug "time binary = [$prog_time]"
   prog_curl=$(which curl)
@@ -51,6 +49,7 @@ main() {
 
   # shellcheck disable=SC2154
   unique="$(echo "$input" "$icount" "$ocount" | hash 10)"
+  # shellcheck disable=SC2154
   cache_file="$tmp_dir/$script_prefix.$action.$unique.cache.txt"
   debug "cache file  = [$cache_file]"
 
@@ -123,8 +122,8 @@ do_cmd() {
       prep_folder="cd '$dir' && "
   fi
 
-  if [[ "$(basename $shell)" ==  "$shell" ]] ; then
-    shell="$(which $shell)"
+  if [[ "$(basename "$shell")" ==  "$shell" ]] ; then
+    shell="$(which "$shell")"
   fi
   debug "Using shell:  [$shell]"
   debug "Executing:    [$prep_rc $prep_folder $input]"
@@ -144,7 +143,7 @@ do_cmd() {
     # program failed
     # shellcheck disable=SC2154
     call_webhook "$failure"
-    cmd_error=$(head -1 $f_timing)
+    cmd_error=$(head -1 "$f_timing")
     if [[ $quiet -eq 0 ]] ; then
       calculate "$icount" "$f_stdout" "$f_stderr" "$f_timing"
       calculate "$ocount" "$f_stdout" "$f_stderr" "$f_timing"
@@ -168,8 +167,8 @@ do_url() {
   fi
   command="'$prog_curl' -s '$input'"
   debug "Executing:    [$command]"
-  if [[ "$(basename $shell)" ==  "$shell" ]] ; then
-    shell="$(which $shell)"
+  if [[ "$(basename "$shell")" ==  "$shell" ]] ; then
+    shell="$(which "$shell")"
   fi
   debug "Using shell:  [$shell]"
   if $prog_time -p "$shell" -c "$command 1> '$f_stdout' 2> '$f_stderr' " 2> "$f_timing" ; then
@@ -188,7 +187,7 @@ do_url() {
     # program failed
     # shellcheck disable=SC2154
     call_webhook "$failure"
-    cmd_error=$(head -1 $f_timing)
+    cmd_error=$(head -1 "$f_timing")
     if [[ $quiet -eq 0 ]] ; then
       calculate "$icount" "$f_stdout" "$f_stderr" "$f_timing"
       calculate "$ocount" "$f_stdout" "$f_stderr" "$f_timing"
@@ -387,7 +386,7 @@ trap "die \"ERROR \$? after \$SECONDS seconds \n\
 safe_exit() {
   [[ -n "${tmp_file:-}" ]] && [[ -f "$tmp_file" ]] && rm "$tmp_file"
   if [[ -n "${delete_upon_exit[*]}" ]] ; then
-    for file in ${delete_upon_exit} ; do
+    for file in "${delete_upon_exit[@]}" ; do
       [[ -f "$file" ]] && rm "$file"
     done
   fi
@@ -506,11 +505,11 @@ check_script_settings() {
   local types=(flag option list param)
   ((for_env)) && types=(flag option list)
   for type in "${types[@]}" ; do
-    if [[ -n $(filter_option_type $type) ]]; then
+    if [[ -n $(filter_option_type "$type") ]]; then
       out "##${col_grn} $type values ${col_reset}"
-      filter_option_type $type |
+      filter_option_type "$type" |
         while read -r name; do
-          print_var_value $type "$name"
+          print_var_value "$type" "$name"
         done
       out " "
     fi
