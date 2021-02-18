@@ -1,12 +1,6 @@
 #!/usr/bin/env bash
-
-# uncomment next line to have time prefix for every output line
-#prefix_fmt='+%H:%M:%S | '
-prefix_fmt=""
-runasroot=-1
-# runasroot = 0 :: don't check anything
-# runasroot = 1 :: script MUST run as root
-# runasroot = -1 :: script MAY NOT run as root
+prefix_fmt='+%H:%M:%S | '
+#prefix_fmt=""
 
 # set strict mode -  via http://redsymbol.net/articles/unofficial-bash-strict-mode/
 set -euo pipefail
@@ -36,21 +30,17 @@ PROGFULLPATH="$PROGDIR/$PROGFNAME"
 readonly PROGLINES=$(< "$PROGFULLPATH" awk 'END {print NR}')
 readonly PROGHASH=$(< "$PROGFULLPATH" hash)
 readonly PROGUUID="L:${PROGLINES}-MD:${PROGHASH}"
-readonly PROGVERS="v2.1"
+if [[ ! -f "$PROGDIR/VERSION.md" ]] ; then
+  readonly PROGVERS="v2.2.0"
+else
+  readonly PROGVERS=$(cat "$PROGDIR/VERSION.md")
+fi
+
 readonly PROGAUTH="peter@forret.com"
 readonly USERNAME=$(whoami)
 readonly TODAY=$(date "+%Y-%m-%d")
 readonly PROGIDEN="«${PROGNAME} ${PROGVERS}»"
 [[ -z "${TEMP:-}" ]] && TEMP=/tmp
-
-### Change the next lines to reflect which flags/options/parameters you need
-### flag:   switch a flag 'on' / no extra parameter / e.g. "-v" for verbose
-### flag|<short>|<long>|<description>|<default>
-### option: set an option value / 1 extra parameter / e.g. "-l error.log" for logging to file
-### option|<short>|<long>|<description>|<default>
-### param:  comes after the options
-### param|<type>|<long>|<description>
-### where <type> = 1 for single parameters or <type> = n for (last) parameter that can be a list
 
 list_options() {
 echo -n "
@@ -64,7 +54,8 @@ option|t|tmpdir|use this as folder for temp files|$TEMP/$PROGNAME
 option|c|cache|cache results for [cache] minutes|5
 option|i|hchk|upon success, call healthchecks.io    (e.g. 0df09a4d-aaaa-aaaa-aaaa-852950e13614)|
 option|z|zpwh|upon failure, call zapier.com webhook (e.g. 199999/aa8iss )|
-
+option|s|shell|use this specific shell|/bin/bash
+option|d|dir|first cd to folder (- = derive from 1st command)|-
 param|1|icount|what to output as 1st parameter: lines/words/chars/secs/msecs/head/tail
 param|1|ocount|what to output as 2nd parameter: lines/words/chars/secs/msecs/head/tail
 param|1|type|what to do: cmd/url
@@ -278,11 +269,12 @@ init_options() {
     BEGIN { FS="|"; OFS=" ";}
     $1 ~ /flag/   && $5 == "" {print $3"=0; "}
     $1 ~ /flag/   && $5 != "" {print $3"="$5"; "}
-    $1 ~ /option/ && $5 == "" {print $3"=\" \"; "}
+    $1 ~ /option/ && $5 == "" {print $3"=\"\"; "}
     $1 ~ /option/ && $5 != "" {print $3"="$5"; "}
     ')
     if [[ -n "$init_command" ]] ; then
         #log "init_options: $(echo "$init_command" | wc -l) options/flags initialised"
+        log "$(echo $init_command | xargs)"
         eval "$init_command"
    fi
 }
@@ -364,13 +356,13 @@ parse_options() {
         BEGIN { FS="|"; OFS=" ";}
         $1 ~ /flag/   &&  "-"$2 == opt {print $3"=1"}
         $1 ~ /flag/   && "--"$3 == opt {print $3"=1"}
-        $1 ~ /option/ &&  "-"$2 == opt {print $3"=$2; shift"}
-        $1 ~ /option/ && "--"$3 == opt {print $3"=$2; shift"}
+        $1 ~ /option/ &&  "-"$2 == opt {print $3"=\"$2\"; shift"}
+        $1 ~ /option/ && "--"$3 == opt {print $3"=\"$2\"; shift"}
         ')
         if [[ -n "$save_option" ]] ; then
           if echo "$save_option" | grep shift >> /dev/null ; then
             local save_var=$(echo "$save_option" | cut -d= -f1)
-            log "Found  : ${save_var}=$2"
+            log "Found  : ${save_var} = $2"
           else
             log "Found  : $save_option"
           fi
@@ -394,15 +386,15 @@ parse_options() {
   if expects_single_params ; then
     #log "Process: single params"
     single_params=$(list_options | grep 'param|1|' | cut -d'|' -f3)
-    nb_singles=$(echo "$single_params" | wc -w)
-    log "Expect : $nb_singles single parameter(s): $single_params"
+    nb_singles=$(echo "$single_params" | wc -w | awk '{print $0 + 0;}')
+    log "Expect : $nb_singles single parameter(s): $(echo $single_params | xargs)"
     [[ $# -eq 0 ]] && die "need the parameter(s) [$single_params]"
     
     for param in $single_params ; do
       [[ $# -eq 0 ]] && die "need parameter [$param]"
       [[ -z "$1" ]]  && die "need parameter [$param]"
       log "Found  : $param=$1"
-      eval "$param=$1"
+      eval "$param=\"$1\""
       shift
     done
   else 
@@ -431,6 +423,11 @@ parse_options() {
     log "all parameters have been processed"
   fi
 }
+
+runasroot=-1
+# runasroot = 0 :: don't check anything
+# runasroot = 1 :: script MUST run as root
+# runasroot = -1 :: script MAY NOT run as root
 
 [[ $runasroot == 1  ]] && [[ $UID -ne 0 ]] && die "MUST be root to run this script"
 [[ $runasroot == -1 ]] && [[ $UID -eq 0 ]] && die "CANNOT be root to run this script"
@@ -501,24 +498,44 @@ calculate(){
       die "Unknown output [$param]"
   esac
   # log "calculate: [$param]: $number"
-  echo $number
+  echo "$number"
 }
 
+tokenize(){
+  basename "$1" .sh \
+  | sed 's/[^A-Za-z0-9 ]//g' \
+  | sed 's/ /_/g' \
+  | cut -c1-12
+}
 
 ## Put your main script here
 main() {
   log "Program: $PROGFNAME $PROGVERS ($PROGUUID)"
   log "Updated: $PROGDATE"
   folder_prep "$tmpdir" 1
+
+  command1=$(echo "$command" | awk '{print $1}')
+  short=$(tokenize "$command1")
+  if [[ $dir == "-" ]] ; then
+    commandfolder=$(dirname "$command1")
+    if [[ -n "$commandfolder" ]] ; then
+      log "First cd to folder [$commandfolder]"
+      cd "$commandfolder"
+    fi
+  fi
+  if [[ -n "$dir" ]] && [[ ! "$dir" == "-" ]] ; then
+      log "First cd to folder [$dir]"
+      cd "$dir"
+  fi
   cmduniq=$(echo $icount $ocount $type $command | hash)
-  cachefile=$tmpdir/$PROGNAME.$cmduniq.cache.txt
+  cachefile=$tmpdir/$short.$cmduniq.cache.txt
   log "Caching: $cachefile":
   folder_prep "$logdir" 7
   logfile=$logdir/$PROGNAME.$TODAY.log
   log "Logging: $logfile"
   echo "$(date '+%H:%M:%S') | [$PROGFNAME] $PROGVERS ($PROGUUID) started" >> $logfile
 
-  verify_programs awk bash curl cut date echo find grep head printf sed stat tail uname time
+  verify_programs awk curl date grep head printf sed stat tail uname time
 
   timenow=$(date +%s)
   if [[ -f "$cachefile" ]] ; then
@@ -527,14 +544,14 @@ main() {
     #minscache=$(expr $secscache / 60)
     minscache=$(date -r "$cachefile" +%s | awk "{secs = $timenow - \$1 ; printf \"%.0f\", secs / 60 }" )
     if [[ $minscache -le $cache ]] ; then
-      log "Caching: cachecd  is $minscache minute(s) old - use cached content"
+      log "Caching: cached output is $minscache minute(s) old - use cached content"
       ((!$quiet)) && cat $cachefile
       safe_exit
     fi
   fi
-  f_stdout=$tmpdir/$PROGNAME.$cmduniq.out.txt
-  f_stderr=$tmpdir/$PROGNAME.$cmduniq.err.txt
-  f_timing=$tmpdir/$PROGNAME.$cmduniq.tim.txt
+  f_stdout=$tmpdir/$short.$cmduniq.out.txt
+  f_stderr=$tmpdir/$short.$cmduniq.err.txt
+  f_timing=$tmpdir/$short.$cmduniq.tim.txt
   tmpfiles="$f_stdout $f_stderr $f_timing"
 
   type=$(lcase $type)
@@ -542,23 +559,24 @@ main() {
   progtime=$(which time) # to avoid using shell built-in time command with less options
   progcurl=$(which curl)
 
-  case $type in
-    url ) 
-      runcmd1=$progcurl
-      runcmd2=-s
+  source_rc=""
+  case $(basename "$shell") in
+    bash )
+      [[ -f $HOME/.bashrc ]] && source_rc="source $HOME/.bashrc ; "
       ;;
-    exec | cmd ) 
-      runcmd1=bash
-      runcmd2=-c
+    zsh )
+      [[ -f $HOME/.zshrc ]] && source_rc="source $HOME/.zshrc ; "
       ;;
-    * )
-      die "Unknown type [$type]"
   esac
 
-  log "Now timing the command [$progtime -p bash -c $runcmd1 $runcmd2 $command 1> $f_stdout 2> $f_stderr > $f_timing]"
+  if [[ "$type" == "url" ]] ; then
+    command="$progcurl -s $command"
+  fi
+
+  log "Now timing the command [$progtime -p bash -c $command 1> $f_stdout 2> $f_stderr]"
   # /usr/bin/time -o-- doesn't work on MacOS
   #  if $progtime -o "$f_timing" -p $runcmd1 $runcmd2 $command 1> "$f_stdout" 2> "$f_stderr" ; then
-  if $progtime -p bash -c "$runcmd1 $runcmd2 $command 1> $f_stdout 2> $f_stderr" 2> $f_timing ; then
+  if $progtime -p "$shell" -c "$source_rc $command 1> \"$f_stdout\" 2> \"$f_stderr\" " 2> "$f_timing" ; then
     # program executed ok
     if [[ -n "$hchk" ]] && [[ ! "$hchk" == " " ]]; then
       # ping hchk.io
@@ -586,7 +604,7 @@ main() {
       # call zapier hook
       webhook="https://hooks.zapier.com/hooks/catch/$zpwh"
       log "program failed: calling [$webhook]"
-      if curl -s --data "program=$PROGIDEN&user=$USERNAME@$HOSTNAME&command=$type:$command&error=$cmderror" $webhook > /dev/null ; then
+      if curl -s --data "program=$PROGIDEN&user=$USERNAME@$HOSTNAME&command=$type:$command&error=$cmderror" "$webhook" > /dev/null ; then
         log "Call to [$webhook]: OK"
       else
         alert "Call to [$webhook]: FAILED"
@@ -601,10 +619,10 @@ main() {
     fi
   fi
 
-  log "Cleanup: deleting temp files"
-  rm -f "$f_stdout"
-  rm -f "$f_stderr"
-  rm -f "$f_timing"
+  # log "Cleanup: deleting temp files"
+  # rm -f "$f_stdout"
+  # rm -f "$f_stderr"
+  # rm -f "$f_timing"
 
 }
 
