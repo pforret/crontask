@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 prefix_fmt='+%H:%M:%S | '
-#prefix_fmt=""
 
 # set strict mode -  via http://redsymbol.net/articles/unofficial-bash-strict-mode/
 set -euo pipefail
