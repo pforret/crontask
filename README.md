@@ -1,3 +1,10 @@
+![bash_unit CI](https://github.com/pforret/crontask/workflows/bash_unit%20CI/badge.svg)
+![Shellcheck CI](https://github.com/pforret/crontask/workflows/Shellcheck%20CI/badge.svg)
+![GH Language](https://img.shields.io/github/languages/top/pforret/crontask)
+![GH stars](https://img.shields.io/github/stars/pforret/crontask)
+![GH tag](https://img.shields.io/github/v/tag/pforret/crontask)
+![GH License](https://img.shields.io/github/license/pforret/crontask)
+[![basher install](https://img.shields.io/badge/basher-install-white?logo=gnu-bash&style=flat)](https://basher.gitparade.com/package/)
 # crontask
 * Bash/sh script to use in crontab config
 * call scripts or URLs, with optional logging
