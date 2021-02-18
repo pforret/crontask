@@ -35,6 +35,7 @@ param|?|input|command to execute/URL to call
 main() {
   log_to_file "[$script_basename] $script_version started"
 
+  delete_upon_exit=()
   prog_time=$(which time) # to avoid using shell built-in time command with less options
   debug "time binary = [$prog_time]"
   prog_curl=$(which curl)
@@ -385,7 +386,7 @@ trap "die \"ERROR \$? after \$SECONDS seconds \n\
 
 safe_exit() {
   [[ -n "${tmp_file:-}" ]] && [[ -f "$tmp_file" ]] && rm "$tmp_file"
-  if [[ -n "${delete_upon_exit[*]}" ]] ; then
+  if [[ -n "${delete_upon_exit:-}" ]] ; then
     for file in "${delete_upon_exit[@]}" ; do
       [[ -f "$file" ]] && rm "$file"
     done
