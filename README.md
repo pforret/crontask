@@ -57,16 +57,19 @@ with [basher](https://github.com/basherpm/basher)
 
 	> basher install pforret/crontask
 
+call in crontab as
+
+    > /Users/[user]/.basher/cellar/bin/crontask ...
+
 or with `git`
 
 	> git clone https://github.com/pforret/crontask.git
 	> cd crontask
     > ln -s crontask.sh /usr/bin/crontask
 
-to use in your crontab
+call in crontab as
 
-	0  4  * * * /usr/bin/crontask cmd /path/daily_cleanup.sh
-    */5 * * * * /usr/bin/crontask url "https://example.com/update"
+    > /usr/bin/crontask ...
 
 ## Output
 
