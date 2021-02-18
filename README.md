@@ -11,7 +11,6 @@
 * integration with healthchecks.io (upon success)
 * integration with zapier.com (alert upon failure)
 * output in MRTG format (in/out/server/uptime)
-* based on bash boilerplate at [https://github.com/pforret/bash-boilerplate](https://github.com/pforret/bash-boilerplate)
 
 ## Usage 
 ```
