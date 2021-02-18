@@ -27,8 +27,8 @@ Flags, options and parameters:
     -l|--log_dir <?> : [option] use this folder for log files   [default: /Users/pforret/log/crontask]
     -t|--tmp_dir <?> : [option] ise this folder for temp files  [default: /Users/pforret/.tmp]
     -m|--minutes <?> : [option] cache results for [cache] minutes  [default: 5]
-    -y|--success <?> : [option] upon success, call webhook (e.g. https://hc-ping.com/eb095278-f28d-448d-87fb-7b75c171a6aa
-    -n|--failure <?> : [option] upon failure, call webhook (e.g. https://hooks.zapier.com/hooks/catch/123456789 )
+    -y|--success <?> : [option] call upon success (e.g. https://hc-ping.com/eb095278-aaa-bbbb-cccc-7b75c171a6aa
+    -n|--failure <?> : [option] call upon failure (e.g. https://hooks.zapier.com/hooks/catch/123456789 )
     -s|--shell <?>   : [option] use this specific shell bash/zsh  [default: bash]
     -d|--dir <?>     : [option] first cd to folder (- = derive from 1st command)  [default: -]
     -i|--icount <?>  : [option] what to output as 1st parameter: lines/words/chars/secs/msecs/head/tail  [default: msecs]

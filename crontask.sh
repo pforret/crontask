@@ -16,8 +16,8 @@ flag|f|force|do not ask for confirmation (always yes)
 option|l|log_dir|use this folder for log files |$HOME/log/crontask
 option|t|tmp_dir|ise this folder for temp files|$HOME/.tmp
 option|m|minutes|cache results for [cache] minutes|5
-option|y|success|upon success, call webhook (e.g. https://hc-ping.com/eb095278-f28d-448d-87fb-7b75c171a6aa|
-option|n|failure|upon failure, call webhook (e.g. https://hooks.zapier.com/hooks/catch/123456789 )|
+option|y|success|call upon success (e.g. https://hc-ping.com/eb095278-aaa-bbbb-cccc-7b75c171a6aa|
+option|n|failure|call upon failure (e.g. https://hooks.zapier.com/hooks/catch/123456789 )|
 option|s|shell|use this specific shell bash/zsh|bash
 option|d|dir|first cd to folder (- = derive from 1st command)|-
 option|i|icount|what to output as 1st parameter: lines/words/chars/secs/msecs/head/tail|msecs
