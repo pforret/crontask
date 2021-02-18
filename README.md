@@ -68,3 +68,12 @@ to use in your crontab
 	0  4  * * * /usr/bin/crontask cmd /path/daily_cleanup.sh
     */5 * * * * /usr/bin/crontask url "https://example.com/update"
 
+output
+
+* [MRTG format](https://blog.forret.com/2015/10/13/extended-mrtg-format/)
+* 4 lines
+    * icount : e.g. # msecs to execute command
+    * ocount : e.g. # lines of output
+    * description
+    * update time
+
