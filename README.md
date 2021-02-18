@@ -6,54 +6,47 @@
 * output in MRTG format (in/out/server/uptime)
 * based on bash boilerplate at [https://github.com/pforret/bash-boilerplate](https://github.com/pforret/bash-boilerplate)
 
-## Usage 2.0
-	Program: crontask2.sh by peter@forret.com
-	Version: v2.0 (L:534-MD:6d4d5c)
-	Updated: 2018-11-28 17:40
-	Usage: crontask2.sh 
-				[-h] [-v] [-q] [-f] 
-				[-l <logdir>] [-t <tmpdir>] [-c <cache>] [-i <hchk>] [-z <zpwh>] 
-				<icount> <ocount> <type> <command>
-	Flags, options and parameters:
-	    -h|--help      : [flag] show help/usage info [default: off]
-	    -v|--verbose   : [flag] show more output (also 'log' statements) [default: off]
-	    -q|--quiet     : [flag] show less output (not even MRTG output) [default: off]
-	    -f|--force     : [flag] do not ask for confirmation [default: off]
-	    -l|--logdir <val>: [optn] use this as folder for log files  [default: /home/peter/DEVL/github/crontask/log]
-	    -t|--tmpdir <val>: [optn] use this as folder for temp files  [default: /tmp/crontask2]
-	    -c|--cache <val>: [optn] cache results for [cache] minutes  [default: 5]
-	    -i|--hchk <val>: [optn] upon success, call healthchecks.io    (e.g. 0df09a4d-aaaa-aaaa-aaaa-852950e13614)
-	    -z|--zpwh <val>: [optn] upon failure, call zapier.com webhook (e.g. 199999/aa8iss )
-	    <icount>  : [parameter] what to output as 1st line: lines/words/chars/secs/msecs/head/tail
-	    <ocount>  : [parameter] what to output as 2nd line: lines/words/chars/secs/msecs/head/tail
-	    <type>    : [parameter] what to do: cmd/url
-	    <command> : [parameter] command to execute/URL to call
+## Usage 
+```
+Program: crontask.sh 3.0.0 by peter@forret.com
+Updated: Feb 18 23:13:34 2021
+Description: run tasks/URLs in your cron
+Usage: crontask.sh [-h] [-q] [-v] [-f] 
+            [-l <log_dir>] [-t <tmp_dir>] [-m <minutes>] 
+            [-y <success>] [-n <failure>] [-s <shell>] [-d <dir>] 
+            [-i <icount>] [-o <ocount>] <action> <input?>
+Flags, options and parameters:
+    -h|--help        : [flag] show usage [default: off]
+    -q|--quiet       : [flag] no output [default: off]
+    -v|--verbose     : [flag] output more [default: off]
+    -f|--force       : [flag] do not ask for confirmation (always yes) [default: off]
+    -l|--log_dir <?> : [option] use this folder for log files   [default: /Users/pforret/log/crontask]
+    -t|--tmp_dir <?> : [option] ise this folder for temp files  [default: /Users/pforret/.tmp]
+    -m|--minutes <?> : [option] cache results for [cache] minutes  [default: 5]
+    -y|--success <?> : [option] upon success, call webhook (e.g. https://hc-ping.com/eb095278-f28d-448d-87fb-7b75c171a6aa
+    -n|--failure <?> : [option] upon failure, call webhook (e.g. https://hooks.zapier.com/hooks/catch/123456789 )
+    -s|--shell <?>   : [option] use this specific shell bash/zsh  [default: bash]
+    -d|--dir <?>     : [option] first cd to folder (- = derive from 1st command)  [default: -]
+    -i|--icount <?>  : [option] what to output as 1st parameter: lines/words/chars/secs/msecs/head/tail  [default: msecs]
+    -o|--ocount <?>  : [option] what to output as 2nd parameter: lines/words/chars/secs/msecs/head/tail  [default: lines]
+    <action>         : [parameter] what to do: check/cmd/url
+    <input>          : [parameter] command to execute/URL to call (optional)           
+```
 
-## Usage 1.0
-	crontask.sh - crontask (v1.0 - Oct 2015)
-	https://github.com/pforret/crontask by Peter Forret
-	GNU GENERAL PUBLIC LICENSE (see LICENSE file)
-	cron wrapper script, with logging, timeout and heartbeat
-	
-	Usage:
-		crontask.sh [-v] [-h] [--hchk <id>] [--mail <email@example.com] script|url
-	-v		:	verbose
-	--hchk	:	call a healthchecks.io URL after task finished successfully
-	--log	:	add log to file (and keep file)
-	--mail	:	send mail after task finished successfully (requires python or php on your server)
-	script	:	local script (with full path)
-	url  	:	httpp or https URL (requires curl, wget, python or php on your server)
+## 🚀 Installation
 
-	Examples:
-		0  4   * * * /usr/bin/ct /path/daily_cleanup.sh
-		15 *   * * * /usr/bin/ct http://example.com/process_queue.php
-		15 *   * * * /usr/bin/ct --hchk XXX --log /var/log/cron/ http://example.com/process_queue.php
+with [basher](https://github.com/basherpm/basher)
 
-	crontab tips
-	* add the following lines to the beginning of your crontab config:
-     	SHELL=/bin/sh
-     	PATH=/sbin:/bin:/usr/sbin:/usr/bin:/opt/sbin:/opt/bin
-     	MAILTO=your@email.com
+	$ basher install pforret/crontask
 
-	* create a symbolic link from /usr/bin/ct to crontash.sh
-     	sudo ln -s /the/path/to/crontask.sh /usr/bin/ct
+or with `git`
+
+	$ git clone https://github.com/pforret/crontask.git
+	$ cd crontask
+    $ ln -s crontask.sh /usr/bin/crontask
+
+to use in your crontab
+
+	0  4  * * * /usr/bin/crontask cmd /path/daily_cleanup.sh
+    */5 * * * * /usr/bin/crontask url "https://example.com/update"
+
