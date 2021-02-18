@@ -7,6 +7,9 @@
 [![basher install](https://img.shields.io/badge/basher-install-white?logo=gnu-bash&style=flat)](https://basher.gitparade.com/package/)
 
 # crontask
+
+![](assets/crontask.jpg)
+
 * Bash script to use in crontab config
 * call scripts or URLs, with optional logging
 * integration with e.g. healthchecks.io (upon success)
