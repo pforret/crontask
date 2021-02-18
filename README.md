@@ -5,11 +5,12 @@
 ![GH tag](https://img.shields.io/github/v/tag/pforret/crontask)
 ![GH License](https://img.shields.io/github/license/pforret/crontask)
 [![basher install](https://img.shields.io/badge/basher-install-white?logo=gnu-bash&style=flat)](https://basher.gitparade.com/package/)
+
 # crontask
-* Bash/sh script to use in crontab config
+* Bash script to use in crontab config
 * call scripts or URLs, with optional logging
-* integration with healthchecks.io (upon success)
-* integration with zapier.com (alert upon failure)
+* integration with e.g. healthchecks.io (upon success)
+* integration with e.g. zapier.com (alert upon failure)
 * output in MRTG format (in/out/server/uptime)
 
 ## Usage 
@@ -17,10 +18,7 @@
 Program: crontask.sh 3.0.0 by peter@forret.com
 Updated: Feb 18 23:13:34 2021
 Description: run tasks/URLs in your cron
-Usage: crontask.sh [-h] [-q] [-v] [-f] 
-            [-l <log_dir>] [-t <tmp_dir>] [-m <minutes>] 
-            [-y <success>] [-n <failure>] [-s <shell>] [-d <dir>] 
-            [-i <icount>] [-o <ocount>] <action> <input?>
+Usage: crontask.sh [-h] [-q] [-v] [-f] [-l <log_dir>] [-t <tmp_dir>] [-m <minutes>] [-y <success>] [-n <failure>] [-s <shell>] [-d <dir>] [-i <icount>] [-o <ocount>] <action> <input?>
 Flags, options and parameters:
     -h|--help        : [flag] show usage [default: off]
     -q|--quiet       : [flag] no output [default: off]
@@ -36,20 +34,34 @@ Flags, options and parameters:
     -i|--icount <?>  : [option] what to output as 1st parameter: lines/words/chars/secs/msecs/head/tail  [default: msecs]
     -o|--ocount <?>  : [option] what to output as 2nd parameter: lines/words/chars/secs/msecs/head/tail  [default: lines]
     <action>         : [parameter] what to do: check/cmd/url
-    <input>          : [parameter] command to execute/URL to call (optional)           
+    <input>          : [parameter] command to execute/URL to call (optional)
+                                  @github.com:pforret/crontask.git                                             
+### TIPS & EXAMPLES
+* use crontask cmd to run a command from crontab
+  crontask cmd "/path/to/calculate_statistics this that"
+* use crontask url to call a URL from crontab
+  crontask url "https://.../update"
+* use crontask check to check if this script is ready to execute and what values the options/flags are
+  crontask check
+* use crontask env to generate an example .env file
+  crontask env > .env
+* use crontask update to update to the latest version
+  crontask check
+* >>> bash script created with pforret/bashew
+* >>> for bash development, also check out pforret/setver and pforret/progressbar   
 ```
 
 ## 🚀 Installation
 
 with [basher](https://github.com/basherpm/basher)
 
-	$ basher install pforret/crontask
+	> basher install pforret/crontask
 
 or with `git`
 
-	$ git clone https://github.com/pforret/crontask.git
-	$ cd crontask
-    $ ln -s crontask.sh /usr/bin/crontask
+	> git clone https://github.com/pforret/crontask.git
+	> cd crontask
+    > ln -s crontask.sh /usr/bin/crontask
 
 to use in your crontab
 
