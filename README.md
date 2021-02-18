@@ -68,7 +68,7 @@ to use in your crontab
 	0  4  * * * /usr/bin/crontask cmd /path/daily_cleanup.sh
     */5 * * * * /usr/bin/crontask url "https://example.com/update"
 
-output
+## Output
 
 * [MRTG format](https://blog.forret.com/2015/10/13/extended-mrtg-format/)
 * 4 lines
@@ -77,3 +77,18 @@ output
     * description
     * update time
 
+### Example
+
+```bash
+> crontask cmd "ping -c 1 www.google.com"
+500
+6
+«ping -c 1 www.google.com»: msecs lines
+2021-02-19 00:28:04
+
+> crontask url "https://blog.example.com/cron.php" 
+270
+127
+«https://blog.example.com/cron.php»: msecs lines
+2021-02-19 00:29:51           
+```
