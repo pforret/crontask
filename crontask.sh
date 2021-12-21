@@ -36,9 +36,9 @@ main() {
   log_to_file "[$script_basename] $script_version started"
 
   delete_upon_exit=()
-  prog_time=$(which time) # to avoid using shell built-in time command with less options
+  prog_time=$(command -v time) # to avoid using shell built-in time command with less options
   debug "time binary = [$prog_time]"
-  prog_curl=$(which curl)
+  prog_curl=$(command -v curl)
   debug "curl binary = [$prog_curl]"
 
   prep_rc=""
@@ -124,7 +124,7 @@ do_cmd() {
   fi
 
   if [[ "$(basename "$shell")" ==  "$shell" ]] ; then
-    shell="$(which "$shell")"
+    shell="$(command -v "$shell")"
   fi
   debug "Using shell:  [$shell]"
   debug "Executing:    [$prep_rc $prep_folder $input]"
@@ -169,7 +169,7 @@ do_url() {
   command="'$prog_curl' --no-progress-meter '$input'"
   debug "Executing:    [$command]"
   if [[ "$(basename "$shell")" ==  "$shell" ]] ; then
-    shell="$(which "$shell")"
+    shell="$(command -v "$shell")"
   fi
   debug "Using shell:  [$shell]"
   if $prog_time -p "$shell" -c "$command 1> '$f_stdout' 2> '$f_stderr' " 2> "$f_timing" ; then
@@ -258,7 +258,7 @@ IFS=$'\n\t'
 hash() {
   length=${1:-6}
   # shellcheck disable=SC2230
-  if [[ -n $(which md5sum) ]]; then
+  if [[ -n $(command -v md5sum) ]]; then
     # regular linux
     md5sum | cut -c1-"$length"
   else
@@ -313,8 +313,8 @@ initialise_output() {
   fi
   error_prefix="${col_red}>${col_reset}"
 
-  readonly nbcols=$(tput cols 2>/dev/null || echo 80)
-  readonly wprogress=$((nbcols - 5))
+  nbcols=$(tput cols 2>/dev/null || echo 80)
+  wprogress=$((nbcols - 5))
 }
 
 out() { ((quiet)) && true || printf '%b\n' "$*"; }
@@ -668,7 +668,7 @@ parse_options() {
 
 require_program() {
   require_program="$1"
-  path_program=$(which "$require_program" 2>/dev/null)
+  path_program=$(command -v "$require_program" 2>/dev/null)
   [[ -n "$path_program" ]] && debug "️$require_icon required [$require_program] -> [$path_program]"
   [[ -n "$path_program" ]] && return 0
   if [[ $(echo "$required_package" | wc -w) -gt 1 ]]; then
@@ -724,16 +724,15 @@ recursive_readlink() {
 }
 
 lookup_script_data() {
-  readonly script_prefix=$(basename "${BASH_SOURCE[0]}" .sh)
-  readonly script_basename=$(basename "${BASH_SOURCE[0]}")
-  readonly execution_day=$(date "+%Y-%m-%d")
-  #readonly execution_year=$(date "+%Y")
+  script_prefix=$(basename "${BASH_SOURCE[0]}" .sh)
+  script_basename=$(basename "${BASH_SOURCE[0]}")
+  execution_day=$(date "+%Y-%m-%d")
 
   script_install_path="${BASH_SOURCE[0]}"
   debug "$info_icon Script path: $script_install_path"
   script_install_path=$(recursive_readlink "$script_install_path")
   debug "$info_icon Actual path: $script_install_path"
-  readonly script_install_folder="$(dirname "$script_install_path")"
+  script_install_folder="$(dirname "$script_install_path")"
   if [[ -f "$script_install_path" ]]; then
     script_hash=$(hash <"$script_install_path" 8)
     script_lines=$(awk <"$script_install_path" 'END {print NR}')
@@ -752,7 +751,7 @@ lookup_script_data() {
   [[ -n "${KSH_VERSION:-}" ]] && shell_brand="ksh" && shell_version="$KSH_VERSION"
   debug "$info_icon Shell type : $shell_brand - version $shell_version"
 
-  readonly os_kernel=$(uname -s)
+  os_kernel=$(uname -s)
   os_version=$(uname -r)
   os_machine=$(uname -m)
   install_package=""
@@ -766,7 +765,7 @@ lookup_script_data() {
     install_package="brew install"
     ;;
   Linux | GNU*)
-    if [[ $(which lsb_release) ]]; then
+    if [[ $(command -v lsb_release) ]]; then
       # 'normal' Linux distributions
       os_name=$(lsb_release -i)    # Ubuntu
       os_version=$(lsb_release -r) # 20.04
@@ -801,20 +800,20 @@ lookup_script_data() {
   debug "$info_icon Creation   : $script_created"
   debug "$info_icon Running as : $USER@$HOSTNAME"
 
-  # if run inside a git repo, detect for which remote repo it is
+  # if run inside a git repo, detect for command -v remote repo it is
   if git status &>/dev/null; then
-    readonly git_repo_remote=$(git remote -v | awk '/(fetch)/ {print $2}')
+    git_repo_remote=$(git remote -v | awk '/(fetch)/ {print $2}')
     debug "$info_icon git remote : $git_repo_remote"
-    readonly git_repo_root=$(git rev-parse --show-toplevel)
+    git_repo_root=$(git rev-parse --show-toplevel)
     debug "$info_icon git folder : $git_repo_root"
   else
-    readonly git_repo_root=""
-    readonly git_repo_remote=""
+    git_repo_root=""
+    git_repo_remote=""
   fi
 
-  # get script version from VERSION.md file - which is automatically updated by pforret/setver
+  # get script version from VERSION.md file - command -v is automatically updated by pforret/setver
   [[ -f "$script_install_folder/VERSION.md" ]] && script_version=$(cat "$script_install_folder/VERSION.md")
-  # get script version from git tag file - which is automatically updated by pforret/setver
+  # get script version from git tag file - command -v is automatically updated by pforret/setver
   [[ -n "$git_repo_root" ]] && [[ -n "$(git tag &>/dev/null)" ]] && script_version=$(git tag --sort=version:refname | tail -1)
 }
 
