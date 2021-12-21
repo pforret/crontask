@@ -188,7 +188,6 @@ do_url() {
     # program failed
     # shellcheck disable=SC2154
     call_webhook "$failure"
-    #cmd_error=$(head -1 "$f_timing")
     cmd_error=$(tail -1 "$f_stderr")
     if [[ $quiet -eq 0 ]] ; then
       calculate "$icount" "$f_stdout" "$f_stderr" "$f_timing"
