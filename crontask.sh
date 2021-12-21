@@ -144,7 +144,7 @@ do_cmd() {
     # program failed
     # shellcheck disable=SC2154
     call_webhook "$failure"
-    cmd_error=$(head -1 "$f_timing")
+    cmd_error=$(tail -1 "$f_stderr")
     if [[ $quiet -eq 0 ]] ; then
       calculate "$icount" "$f_stdout" "$f_stderr" "$f_timing"
       calculate "$ocount" "$f_stdout" "$f_stderr" "$f_timing"
@@ -166,7 +166,7 @@ do_url() {
     echo "$cached"
     safe_exit
   fi
-  command="'$prog_curl' -s '$input'"
+  command="'$prog_curl' --no-progress-meter '$input'"
   debug "Executing:    [$command]"
   if [[ "$(basename "$shell")" ==  "$shell" ]] ; then
     shell="$(which "$shell")"
@@ -188,7 +188,8 @@ do_url() {
     # program failed
     # shellcheck disable=SC2154
     call_webhook "$failure"
-    cmd_error=$(head -1 "$f_timing")
+    #cmd_error=$(head -1 "$f_timing")
+    cmd_error=$(tail -1 "$f_stderr")
     if [[ $quiet -eq 0 ]] ; then
       calculate "$icount" "$f_stdout" "$f_stderr" "$f_timing"
       calculate "$ocount" "$f_stdout" "$f_stderr" "$f_timing"

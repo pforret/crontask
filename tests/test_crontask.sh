@@ -20,7 +20,18 @@ test_command_nslookup() {
   assert_equals 1 "$("$root_script" cmd "nslookup www.google.com" 2>&1 | grep -c "nslookup")"
 }
 
+test_command_error() {
+  # script without parameters should show option -v or --verbose
+  assert_equals 2 "$("$root_script" cmd "nsslookup www.google.com" 2>&1 | grep -i -c "error")"
+}
+
 test_url_google() {
   # script without parameters should show option -v or --verbose
   assert_equals 1 "$("$root_script" url "https://www.google.com" 2>&1 | grep -c "google")"
 }
+
+test_url_error() {
+  # script without parameters should show option -v or --verbose
+  assert_equals 2 "$("$root_script" url "https://www.google.nocom" 2>&1 | grep -i -c "error")"
+}
+
